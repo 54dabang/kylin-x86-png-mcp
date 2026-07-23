@@ -138,14 +138,14 @@ TAG=v0.1.0-amd64 npm run build:linux-amd64-tar
 产物：
 
 ```text
-dist/kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar.gz
-dist/kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar.gz.sha256
+dist/kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar
+dist/kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar.sha256
 ```
 
 目标 x86 Linux 服务器加载和运行：
 
 ```bash
-docker load -i kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar.gz
+docker load -i kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar
 docker image inspect kylin-x86-png-mcp:v0.1.0-amd64 --format '{{.Os}}/{{.Architecture}}'
 docker run -d --name kylin-x86-png-mcp \
   -p 7003:7003 \
@@ -203,14 +203,14 @@ curl http://127.0.0.1:7003/health
 Release asset 名称：
 
 ```text
-kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar.gz
+kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar
 ```
 
 下载链接模板：
 
 ```text
-https://github.com/<owner>/<repo>/releases/download/v0.1.0-amd64/kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar.gz
-https://gh.llkk.cc/https://github.com/<owner>/<repo>/releases/download/v0.1.0-amd64/kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar.gz
+https://github.com/<owner>/<repo>/releases/download/v0.1.0-amd64/kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar
+https://gh.llkk.cc/https://github.com/<owner>/<repo>/releases/download/v0.1.0-amd64/kylin-x86-png-mcp-v0.1.0-amd64-linux-amd64.tar
 ```
 
 ## 保留的 Kylin ARM64 Release tar

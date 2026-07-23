@@ -59,11 +59,10 @@ jobs:
           curl -fsS "${chart_url}" -o /tmp/chart-by-url.png
           test "$(file -b --mime-type /tmp/chart-by-url.png)" = "image/png"
 
-      - name: Compress and hash Docker tar
+      - name: Hash Docker tar
         run: |
-          gzip -9 /tmp/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar
-          mv /tmp/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz .
-          sha256sum kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz > kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz.sha256
+          mv /tmp/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar .
+          sha256sum kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar > kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.sha256
 
       - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v3
@@ -82,10 +81,10 @@ jobs:
             MCP/HTTP JSON returns `chartUrl`; generated images are served from `/charts/:filename` and expire after 24 hours.
 
             Download:
-            https://github.com/${{ github.repository }}/releases/download/${{ inputs.tag }}/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz
+            https://github.com/${{ github.repository }}/releases/download/${{ inputs.tag }}/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar
 
             Gitproxy:
-            https://gh.llkk.cc/https://github.com/${{ github.repository }}/releases/download/${{ inputs.tag }}/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz
+            https://gh.llkk.cc/https://github.com/${{ github.repository }}/releases/download/${{ inputs.tag }}/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar
           files: |
-            kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz
-            kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz.sha256
+            kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar
+            kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.sha256

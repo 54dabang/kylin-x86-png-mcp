@@ -4,7 +4,7 @@ set -euo pipefail
 TAG="${TAG:-v0.1.0-amd64}"
 IMAGE="${IMAGE:-kylin-x86-png-mcp:${TAG}}"
 OUT_DIR="${OUT_DIR:-dist}"
-TAR_FILE="${OUT_DIR}/kylin-x86-png-mcp-${TAG}-linux-amd64.tar.gz"
+TAR_FILE="${OUT_DIR}/kylin-x86-png-mcp-${TAG}-linux-amd64.tar"
 
 mkdir -p "${OUT_DIR}"
 
@@ -18,7 +18,7 @@ test "$(docker image inspect "${IMAGE}" --format '{{.Os}}/{{.Architecture}}')" =
 docker run --rm --platform linux/amd64 "${IMAGE}" rsvg-convert --version
 docker run --rm --platform linux/amd64 "${IMAGE}" node scripts/smoke-render.js
 
-docker save "${IMAGE}" | gzip -9 > "${TAR_FILE}"
+docker save -o "${TAR_FILE}" "${IMAGE}"
 
 if command -v sha256sum >/dev/null 2>&1; then
   sha256sum "${TAR_FILE}" > "${TAR_FILE}.sha256"
