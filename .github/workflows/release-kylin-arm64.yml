@@ -23,8 +23,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
-        with:
-          install: true
 
       - name: Build Kylin ARM64 image tar
         uses: docker/build-push-action@v7
