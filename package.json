@@ -1,0 +1,24 @@
+{
+  "name": "kylin-x86-png-mcp",
+  "version": "0.1.0",
+  "description": "Offline MCP/HTTP ECharts PNG server with 24-hour image URLs and linux/amd64 Docker tar packaging.",
+  "type": "module",
+  "bin": {
+    "kylin-mcp-echarts": "src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js --transport sse --port 7003",
+    "smoke": "node scripts/smoke-render.js",
+    "build:linux-amd64-tar": "bash scripts/build-linux-amd64-tar.sh",
+    "build:kylin-arm64-tar": "bash scripts/build-kylin-arm64-tar.sh"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.29.0",
+    "echarts": "6.1.0",
+    "express": "5.1.0",
+    "zod": "3.25.76"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

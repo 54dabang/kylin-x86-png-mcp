@@ -1,0 +1,76 @@
+ARG KYLIN_BASE_IMAGE=macrosan/kylin:v10-sp3-2403
+FROM ${KYLIN_BASE_IMAGE}
+
+ARG NODE_VERSION=22.21.1
+
+ENV NODE_ENV=production \
+    PORT=7003 \
+    HOST=0.0.0.0 \
+    CHARTS_DIR=/app/charts \
+    PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/local/lib64/pkgconfig:/usr/lib64/pkgconfig \
+    LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64 \
+    LDFLAGS="-Wl,-z,max-page-size=65536" \
+    ECHARTS_FONT_FAMILY="Noto Sans CJK SC, WenQuanYi Micro Hei, Microsoft YaHei, sans-serif"
+
+ENV IMAGE_TTL_HOURS=24 \
+    CLEANUP_INTERVAL_MINUTES=60
+
+WORKDIR /app
+
+# Install system dependencies before npm install. Kylin ARM64 64KB PAGE_SIZE
+# hosts must not use generic 4KB-page prebuilt native npm binaries.
+RUN yum update -y && \
+    yum install -y \
+      curl \
+      tar \
+      xz \
+      nodejs \
+      npm \
+      gcc \
+      gcc-c++ \
+      make \
+      pkgconfig \
+      cairo-devel \
+      libjpeg-turbo-devel \
+      libpng-devel \
+      pango-devel \
+      giflib-devel \
+      librsvg2-devel \
+      librsvg2-tools \
+      fontconfig \
+      fontconfig-devel \
+      freetype-devel \
+      wqy-microhei-fonts \
+      glibc-langpack-en \
+      glibc-langpack-zh && \
+    yum clean all
+
+RUN curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-arm64.tar.xz" -o /tmp/node.tar.xz && \
+    tar -xJf /tmp/node.tar.xz -C /usr/local --strip-components=1 && \
+    rm -f /tmp/node.tar.xz && \
+    node --version && \
+    npm --version && \
+    npm install -g node-gyp@9.4.1
+
+# Force source builds for any native npm extension. The current service avoids
+# canvas entirely, but these knobs protect future dependency changes.
+ENV npm_config_build_from_source=true \
+    npm_config_canvas_build_from_source=true \
+    npm_config_foreground_scripts=true \
+    LANG=zh_CN.UTF-8 \
+    LANGUAGE=zh_CN:zh \
+    LC_ALL=zh_CN.UTF-8
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY src ./src
+COPY scripts ./scripts
+RUN mkdir -p /app/charts && \
+    node -e 'const p=require("./package-lock.json"); const s=JSON.stringify(p); if (s.includes("@napi-rs/canvas") || s.includes("node_modules/canvas")) process.exit(1)' && \
+    command -v rsvg-convert && \
+    node scripts/smoke-render.js && \
+    rm -f /app/charts/smoke_bar_chart_*.svg /app/charts/smoke_bar_chart_*.png
+
+EXPOSE 7003
+CMD ["node", "src/index.js", "--transport", "sse", "--port", "7003"]

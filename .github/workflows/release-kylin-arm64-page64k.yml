@@ -1,0 +1,71 @@
+name: Release Kylin ARM64 Page64K Docker Tar
+
+"on":
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v0.1.0-page64k
+        required: true
+        default: v0.1.0-page64k
+      kylin_base_image:
+        description: Kylin/vendor ARM64 base image
+        required: true
+        default: macrosan/kylin:v10-sp3-2403
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: [self-hosted, Linux, ARM64, page64k]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Verify 64K ARM64 host
+        run: |
+          test "$(uname -m)" = "aarch64"
+          test "$(getconf PAGE_SIZE)" = "65536"
+          docker version
+
+      - name: Build on 64K page-size Kylin-compatible host
+        run: |
+          docker build \
+            --platform linux/arm64 \
+            --build-arg KYLIN_BASE_IMAGE="${{ inputs.kylin_base_image }}" \
+            -f Dockerfile.kylin \
+            -t kylin-offline-mcp-echarts:${{ inputs.tag }}-arm64-page64k .
+
+      - name: Verify image platform and runtime
+        run: |
+          test "$(docker image inspect kylin-offline-mcp-echarts:${{ inputs.tag }}-arm64-page64k --format '{{.Os}}/{{.Architecture}}')" = "linux/arm64"
+          docker run --rm kylin-offline-mcp-echarts:${{ inputs.tag }}-arm64-page64k node -e "const p=require('/app/package-lock.json'); const s=JSON.stringify(p); if (s.includes('@napi-rs/canvas') || s.includes('node_modules/canvas')) process.exit(1); console.log('no canvas native dependency')"
+          docker run --rm kylin-offline-mcp-echarts:${{ inputs.tag }}-arm64-page64k rsvg-convert --version
+          docker run --rm kylin-offline-mcp-echarts:${{ inputs.tag }}-arm64-page64k node scripts/smoke-render.js
+
+      - name: Save Docker tar
+        run: |
+          docker save kylin-offline-mcp-echarts:${{ inputs.tag }}-arm64-page64k | gzip -9 > kylin-offline-mcp-echarts-${{ inputs.tag }}-linux-arm64-page64k.tar.gz
+          sha256sum kylin-offline-mcp-echarts-${{ inputs.tag }}-linux-arm64-page64k.tar.gz > kylin-offline-mcp-echarts-${{ inputs.tag }}-linux-arm64-page64k.tar.gz.sha256
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: Kylin Offline MCP ECharts ${{ inputs.tag }}
+          body: |
+            Offline MCP ECharts SSE server built on a verified ARM64 64K page-size host.
+
+            Runtime path:
+            ECharts SVG SSR -> rsvg-convert PNG -> /charts static URL -> MCP SSE JSON text.
+
+            Base image:
+            `${{ inputs.kylin_base_image }}`
+
+            Download:
+            https://github.com/${{ github.repository }}/releases/download/${{ inputs.tag }}/kylin-offline-mcp-echarts-${{ inputs.tag }}-linux-arm64-page64k.tar.gz
+
+            Gitproxy:
+            https://gh.llkk.cc/https://github.com/${{ github.repository }}/releases/download/${{ inputs.tag }}/kylin-offline-mcp-echarts-${{ inputs.tag }}-linux-arm64-page64k.tar.gz
+          files: |
+            kylin-offline-mcp-echarts-${{ inputs.tag }}-linux-arm64-page64k.tar.gz
+            kylin-offline-mcp-echarts-${{ inputs.tag }}-linux-arm64-page64k.tar.gz.sha256

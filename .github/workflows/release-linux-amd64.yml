@@ -1,0 +1,93 @@
+name: Release Linux AMD64 Docker Tar
+
+"on":
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag, for example v0.1.0-amd64
+        required: true
+        default: v0.1.0-amd64
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+        with:
+          install: true
+
+      - name: Build linux/amd64 Docker tar
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64
+          tags: kylin-x86-png-mcp:${{ inputs.tag }}
+          outputs: type=docker,dest=/tmp/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar
+          provenance: false
+          sbom: false
+
+      - name: Verify platform and curl PNG path
+        run: |
+          docker load -i /tmp/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar
+          platform="$(docker image inspect kylin-x86-png-mcp:${{ inputs.tag }} --format '{{.Os}}/{{.Architecture}}')"
+          echo "${platform}"
+          test "${platform}" = "linux/amd64"
+
+          docker run -d --rm --name kylin-x86-png-mcp-smoke -p 7003:7003 kylin-x86-png-mcp:${{ inputs.tag }}
+          trap 'docker stop kylin-x86-png-mcp-smoke >/dev/null 2>&1 || true' EXIT
+
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            curl -fsS http://127.0.0.1:7003/health && break
+            sleep 1
+          done
+
+          curl -fsS -D /tmp/chart.headers -o /tmp/chart.png \
+            -X POST http://127.0.0.1:7003/api/render/generate_bar_chart \
+            -H 'Content-Type: application/json' \
+            -d '{"data":[{"category":"A","value":9.7},{"category":"B","value":8.52},{"category":"C","value":7.37}],"title":"curl png smoke","axisXTitle":"name","axisYTitle":"amount"}'
+
+          test "$(file -b --mime-type /tmp/chart.png)" = "image/png"
+          grep -i '^X-Chart-Url:' /tmp/chart.headers
+          grep -Ei 'max-age=8[0-9]{4}' /tmp/chart.headers
+
+          chart_url="$(awk -F': ' 'tolower($1)=="x-chart-url"{print $2}' /tmp/chart.headers | tr -d '\r')"
+          curl -fsS "${chart_url}" -o /tmp/chart-by-url.png
+          test "$(file -b --mime-type /tmp/chart-by-url.png)" = "image/png"
+
+      - name: Compress and hash Docker tar
+        run: |
+          gzip -9 /tmp/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar
+          mv /tmp/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz .
+          sha256sum kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz > kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz.sha256
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: ${{ inputs.tag }}
+          name: Kylin x86 PNG MCP ${{ inputs.tag }}
+          body: |
+            Docker image tar for linux/amd64.
+
+            Image inside tar:
+            `kylin-x86-png-mcp:${{ inputs.tag }}`
+
+            Direct curl PNG endpoint:
+            `POST /api/render/:toolName`
+
+            MCP/HTTP JSON returns `chartUrl`; generated images are served from `/charts/:filename` and expire after 24 hours.
+
+            Download:
+            https://github.com/${{ github.repository }}/releases/download/${{ inputs.tag }}/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz
+
+            Gitproxy:
+            https://gh.llkk.cc/https://github.com/${{ github.repository }}/releases/download/${{ inputs.tag }}/kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz
+          files: |
+            kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz
+            kylin-x86-png-mcp-${{ inputs.tag }}-linux-amd64.tar.gz.sha256

@@ -1,0 +1,7 @@
+charts/
+node_modules/
+*.tar
+*.tar.gz
+*.tgz
+npm-debug.log*
+.DS_Store
